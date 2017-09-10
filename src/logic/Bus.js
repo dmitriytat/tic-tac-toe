@@ -1,62 +1,161 @@
+import md5 from "md5";
+
+import Peer from 'peerjs';
+import axios from 'axios';
 import Chain from "./Chain";
+import Block from "./Block";
+
+const QUERY_LATEST = 'QUERY_LATEST';
+const QUERY_ALL = 'QUERY_ALL';
+const RESPONSE_BLOCKCHAIN = 'RESPONSE_BLOCKCHAIN';
 
 export default class Bus {
+    id = '';
+    peer = null;
     /**
-     * @type {Object.<number, Chain>}
+     * @type {{host: string, port: (*), path: string}}
      */
-    chains = {};
-    successCount = 1;
-    mainChain = null;
+    peerOptions = {
+        host: window.location.hostname,
+        port: 9000,
+        path: '/peerjs'
+    };
+
+    connections = [];
 
     constructor() {
-        this.mainChain = new Chain(() => {});
-        this.register(this.mainChain);
-    }
+        this.id = md5(`${Date.now()}${Math.random()}`);
 
-    createChain(callback) {
-        const chain = this.mainChain.clone(callback);
-        this.register(chain);
+        this.blockchain = new Chain();
+        this.blockchain.setBus(this);
 
-        return chain;
+        this.peer = new Peer(this.id, this.peerOptions);
+
+        this.peer.on('connection', (conn) => {
+            conn.on('data', (message) => {
+                this.connections.push(conn);
+                this.handleMessage(conn, message)
+            });
+        });
+
+        axios.post(`//${this.peerOptions.host}:${this.peerOptions.port}/connect`, {id: this.id})
+            .then((response) => {
+                return response.data;
+            })
+            .then(peerIds => {
+                peerIds.forEach(id => {
+                    const conn = this.peer.connect(id);
+
+                    conn.on('open', () => {
+                        conn.on('data', (message) => {
+                            this.handleMessage(conn, message)
+                        });
+
+                        this.connections.push(conn);
+                        conn.send(this.queryChainLengthMsg());
+                    });
+                });
+            });
     }
 
     /**
-     * @param {Chain} chain
+     * @returns {Chain}
      */
-    register(chain) {
-        this.chains[chain.id] = chain;
-        chain.setBus(this);
+    getBlockchain() {
+        return this.blockchain;
+    }
+
+    onAddBlock() {
+        this.broadcast(this.responseLatestMsg());
     }
 
     /**
-     *
-     * @param {Chain} from
-     * @param {string} type
-     * @param {Block} block
+     * @param connection
+     * @param data
      */
-    broadcast(from, type, block) {
-        return new Promise((resolve, reject) => {
-            const successes = Object
-                .keys(this.chains)
-                .map(key => {
-                    const chain = this.chains[key];
+    handleMessage(connection, data) {
+        const message = JSON.parse(data);
+        console.log('Received message ' + JSON.stringify(message));
+        switch (message.type) {
+            case QUERY_LATEST:
+                connection.send(this.responseLatestMsg());
+                break;
+            case QUERY_ALL:
+                connection.send(this.responseChainMsg());
+                break;
+            case RESPONSE_BLOCKCHAIN:
+                this.handleBlockchainResponse(message);
+                break;
+        }
+    }
 
-                    if (chain.id === from.id) return false;
+    handleBlockchainResponse(message) {
+        const receivedBlocks = message.data
+            .map(({index, action, previousHash, timestamp}) => new Block(index, action, previousHash, timestamp))
+            .sort((b1, b2) => (b1.index - b2.index));
 
-                    return chain[type](block);
-                })
-                .filter(Boolean);
+        const latestBlockReceived = receivedBlocks[receivedBlocks.length - 1];
+        const latestBlockHeld = this.blockchain.getLastBlock();
 
-            successes.length >= this.successCount ? resolve() : reject();
+        if (latestBlockReceived.index > latestBlockHeld.index) {
+            console.log('blockchain possibly behind. We got: ' + latestBlockHeld.index + ' Peer got: ' + latestBlockReceived.index);
+            if (latestBlockHeld.hash === latestBlockReceived.previousHash) {
+                console.log("We can append the received block to our chain");
+                this.blockchain.applyBlock(latestBlockReceived);
+                this.broadcast(this.responseLatestMsg());
+            } else if (receivedBlocks.length === 1) {
+                console.log("We have to query the chain from our peer");
+                this.broadcast(this.queryAllMsg());
+            } else {
+                console.log("Received blockchain is longer than current blockchain");
+                this.blockchain.replaceChain(receivedBlocks);
+                this.broadcast(this.responseLatestMsg());
+            }
+        } else {
+            console.log('received blockchain is not longer than received blockchain. Do nothing');
+        }
+    };
+
+    queryChainLengthMsg() {
+        console.log(QUERY_LATEST);
+        return JSON.stringify({
+            'type': QUERY_LATEST
         });
     }
 
+    queryAllMsg() {
+        console.log(QUERY_ALL);
+        return JSON.stringify({
+            'type': QUERY_ALL
+        });
+    };
+
+    responseChainMsg() {
+        console.log('responseChainMsg', RESPONSE_BLOCKCHAIN);
+        return JSON.stringify({
+            'type': RESPONSE_BLOCKCHAIN,
+            'data': this.blockchain.getChain(),
+        });
+    };
+
+    responseLatestMsg() {
+        console.log('responseLatestMsg', RESPONSE_BLOCKCHAIN);
+        return JSON.stringify({
+            'type': RESPONSE_BLOCKCHAIN,
+            'data': [this.blockchain.getLastBlock()],
+        })
+    };
+
     /**
-     * @param {Chain} from
-     * @param {Chain} to
-     * @param {Block} block
+     * @param message
      */
-    send(from, to, block) {
-        to.receive(block);
+    broadcast(message) {
+        this.connections
+        // Object
+        // .values(this.peer.connections)
+        // .filter(conn => conn.open)
+            .forEach(conn => {
+                conn.send(message);
+            });
     }
 }

@@ -1,32 +1,41 @@
 import Block from "./Block";
-import md5 from "md5";
 
 export default class Chain {
-    chain = [];
-    lastBlock = null;
-    id = '';
+    /**
+     * @type {Array.<Block>}
+     */
+    blockchain = [];
+    callback = () => {};
     bus = null;
-    state = {};
-    callback = {};
 
-    constructor(callback) {
-        this.id = md5(`${Date.now()}${Math.random()}`);
-        this.lastBlock = this.createGenesisBlock();
-        this.chain.push(this.lastBlock);
+    constructor() {
+        this.blockchain.push(this.createGenesisBlock());
+    }
+
+    setBus(bus) {
+        this.bus = bus;
+    }
+
+    update(callback) {
         this.callback = callback;
     }
 
-    clone(callback) {
-        const chain = new Chain(callback);
-        chain.state = {...this.state};
-        chain.chain = this.chain.map(block => block.clone());
-        chain.lastBlock = chain.chain[chain.chain.length - 1];
+    /**
+     * @returns {Array.<Block>}
+     */
+    getChain() {
+        return this.blockchain;
+    }
 
-        return chain;
+    /**
+     * @returns {Block}
+     */
+    getLastBlock() {
+        return this.blockchain[this.blockchain.length - 1];
     }
 
     createGenesisBlock() {
-        return new Block(0, null, '0');
+        return new Block(0, {}, '0', 0);
     }
 
     nextBlock(lastBlock, data) {
@@ -36,30 +45,43 @@ export default class Chain {
         return new Block(index, data, hash)
     }
 
+    /**
+     * @param {Block} block
+     */
+    pushBlock(block) {
+        this.blockchain.push(block);
+        this.callback(this.blockchain);
+    }
+
     addBlock(data) {
-        const nextBlock = this.nextBlock(this.lastBlock, data);
+        const nextBlock = this.nextBlock(this.getLastBlock(), data);
 
-        this.bus.broadcast(this, 'receive', nextBlock).then(() => {
-            this.pushBlock(nextBlock);
+        this.pushBlock(nextBlock);
 
-            console.log('Add block:', nextBlock.index, nextBlock.hash);
-        }).catch(e => console.log(e));
+        this.bus.onAddBlock();
+    }
+
+    /**
+     * @param {Block} block
+     */
+    applyBlock(block) {
+        if (!this.isValidNewBlock(block, this.getLastBlock())) return;
+
+        this.pushBlock(block);
+
+        console.log('Receive block:', block.index, block.hash);
     }
 
     /**
      * @param {Block} newBlock
+     * @param {Block} prevBlock
      * @returns {boolean}
      */
-    isValidNewBlock(newBlock) {
-        const game = this.state[newBlock.action.gameId] || {};
-
-        if (game[newBlock.action.tileIndex]) {
-            console.log('Invalid action');
-            return false;
-        } else if (this.lastBlock.index + 1 !== newBlock.index) {
+    isValidNewBlock(newBlock, prevBlock) {
+        if (prevBlock.index + 1 !== newBlock.index) {
             console.log('Invalid index');
             return false;
-        } else if (this.lastBlock.hash !== newBlock.prevHash) {
+        } else if (prevBlock.hash !== newBlock.previousHash) {
             console.log('Invalid previoushash');
             return false;
         } else if (newBlock.getHash() !== newBlock.hash) {
@@ -70,33 +92,35 @@ export default class Chain {
         return true;
     };
 
-    pushBlock(block) {
-        this.lastBlock = block;
-        this.chain.push(this.lastBlock);
-
-        const game = this.state[block.action.gameId] || (this.state[block.action.gameId] = {});
-        game[block.action.tileIndex] = block.action.type;
-
-        this.callback({...this.state});
-    }
-
     /**
-     * @param {Bus} bus
+     * @param {Array.<Block>} blockchainToValidate
      */
-    setBus(bus) {
-        this.bus = bus;
-    }
-
-    /**
-     * @param {Block} block
-     */
-    receive(block) {
-        if (!this.isValidNewBlock(block)) return false;
-
-        this.pushBlock(block);
-
-        console.log('Receive block:', this.lastBlock.index, this.lastBlock.hash);
-
+    isValidChain(blockchainToValidate) {
+        if (JSON.stringify(blockchainToValidate[0]) !== JSON.stringify(this.createGenesisBlock())) {
+            return false;
+        }
+        const tempBlocks = [blockchainToValidate[0]];
+        for (let i = 1; i < blockchainToValidate.length; i++) {
+            if (this.isValidNewBlock(blockchainToValidate[i], tempBlocks[i - 1])) {
+                tempBlocks.push(blockchainToValidate[i]);
+            } else {
+                return false;
+            }
+        }
         return true;
+    };
+
+    /**
+     * @param {Array.<Block>} newBlocks
+     */
+    replaceChain(newBlocks) {
+        if (this.isValidChain(newBlocks) && newBlocks.length > this.blockchain.length) {
+            console.log('Received blockchain is valid. Replacing current blockchain with received blockchain');
+            this.blockchain = newBlocks;
+
+            this.callback(this.blockchain);
+        } else {
+            console.log('Received blockchain invalid');
+        }
     }
 }

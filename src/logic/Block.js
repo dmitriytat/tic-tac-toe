@@ -19,7 +19,7 @@ export default class Block {
     /**
      * @type {string}
      */
-    prevHash = '';
+    previousHash = '';
 
     /**
      * @type {number}
@@ -29,12 +29,12 @@ export default class Block {
     /**
      * @param {number} index
      * @param {{gameId: string, tileIndex: number, type: string}} action
-     * @param {string} prevHash
+     * @param {string} previousHash
      * @param {number} timestamp
      */
-    constructor(index, action, prevHash, timestamp = Date.now() / 1000) {
+    constructor(index, action, previousHash, timestamp = Date.now() / 1000) {
         this.index = index;
-        this.prevHash = prevHash;
+        this.previousHash = previousHash;
         this.action = action;
         this.timestamp = timestamp;
         this.hash = this.getHash();
@@ -44,10 +44,10 @@ export default class Block {
      * @returns {string}
      */
     getHash() {
-        return md5(`${this.index}${this.prevHash}${JSON.stringify(this.action)}${this.timestamp}`);
+        return md5(`${this.index}${this.previousHash}${JSON.stringify(this.action)}${this.timestamp}`);
     }
 
     clone() {
-        return new Block(this.index, this.action, this.prevHash, this.timestamp);
+        return new Block(this.index, this.action, this.previousHash, this.timestamp);
     }
 }

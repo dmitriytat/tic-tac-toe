@@ -4,7 +4,8 @@ import './App.css';
 import IconButton from 'material-ui/IconButton';
 import Cross from 'material-ui/svg-icons/content/clear';
 import Circle from 'material-ui/svg-icons/toggle/radio-button-unchecked';
-import md5 from "md5";
+import Chain from "./logic/Chain";
+import Bus from "./logic/Bus";
 
 const TYPES = {
     cross: 'cross',
@@ -32,9 +33,11 @@ const styles = {
     }
 };
 
+const clearTiles = ['', '', '', '', '', '', '', '', '',];
+
 class App extends Component {
     state = {
-        tiles: ['','','','','','','','','',],
+        tiles: clearTiles.slice(),
         type: TYPES.cross,
         step: 0,
     };
@@ -46,24 +49,30 @@ class App extends Component {
     }
 
     componentDidMount() {
-        this.chain = this.props.bus.createChain((state) => {
-            const tiles = this.state.tiles.map((tile, i) => {
-                return state[this.state.gameId] && state[this.state.gameId][i] || tile;
-            });
+        const bus = new Bus();
+        this.chain = bus.getBlockchain();
 
-            console.log(this.state.gameId)
+        this.chain.update((chain) => {
+            const tiles = clearTiles.slice();
+            const myChain = chain.filter(({action}) => action.gameId === this.state.gameId);
+
+            myChain.forEach(({action}) => tiles[action.tileIndex] = action.type);
+
+            console.log(myChain);
 
             this.setState({
                 tiles,
-                type: this.state.type === TYPES.cross ? TYPES.circle : TYPES.cross,
+                type: myChain[myChain.length - 1] && myChain[myChain.length - 1].action.type === TYPES.cross ? TYPES.circle : TYPES.cross,
             });
         });
+
+        window.lol = this.chain;
     }
 
     render() {
         return (
             <div style={styles.app}>
-                <h5>{this.state.gameId}</h5>
+                <h5>{this.state.gameId} - {this.state.type}</h5>
                 <div style={styles.field}>
                     {this.state.tiles.map((type, i) => (
                         <IconButton
