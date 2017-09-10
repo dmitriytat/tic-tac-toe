@@ -102,7 +102,7 @@ export default class Bus {
             if (latestBlockHeld.hash === latestBlockReceived.previousHash) {
                 console.log("We can append the received block to our chain");
                 this.blockchain.applyBlock(latestBlockReceived);
-                this.broadcast(this.responseLatestMsg());
+                // this.broadcast(this.responseLatestMsg());
             } else if (receivedBlocks.length === 1) {
                 console.log("We have to query the chain from our peer");
                 this.broadcast(this.queryAllMsg());

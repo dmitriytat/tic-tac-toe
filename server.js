@@ -45,10 +45,11 @@ app.post('/connect', (req, res) => {
     res.send(clients);
 });
 
-server.on('connection', function (socket) {
-    // console.log('connection', socket)
-});
-
-server.on('disconnect', function (id) {
-    bus.removeClients([id]);
-});
+// server.on('connection', function (socket) {
+//     console.log('connection', socket)
+// });
+//
+// server.on('disconnect', function (id) {
+//     bus.removeClients([id]);
+// });
+//

@@ -28,7 +28,7 @@ export default class Block {
 
     /**
      * @param {number} index
-     * @param {{gameId: string, tileIndex: number, type: string}} action
+     * @param {{gameId: string, tileIndex: number, type: boolean}} action
      * @param {string} previousHash
      * @param {number} timestamp
      */

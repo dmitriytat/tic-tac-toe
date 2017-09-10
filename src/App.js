@@ -8,8 +8,8 @@ import Chain from "./logic/Chain";
 import Bus from "./logic/Bus";
 
 const TYPES = {
-    cross: 'cross',
-    circle: 'circle',
+    cross: true,
+    circle: false,
 };
 
 const styles = {
@@ -52,17 +52,9 @@ class App extends Component {
         const bus = new Bus();
         this.chain = bus.getBlockchain();
 
-        this.chain.update((chain) => {
-            const tiles = clearTiles.slice();
-            const myChain = chain.filter(({action}) => action.gameId === this.state.gameId);
-
-            myChain.forEach(({action}) => tiles[action.tileIndex] = action.type);
-
-            console.log(myChain);
-
+        this.chain.update((state) => {
             this.setState({
-                tiles,
-                type: myChain[myChain.length - 1] && myChain[myChain.length - 1].action.type === TYPES.cross ? TYPES.circle : TYPES.cross,
+                ...state[this.state.gameId],
             });
         });
 
@@ -72,10 +64,11 @@ class App extends Component {
     render() {
         return (
             <div style={styles.app}>
-                <h5>{this.state.gameId} - {this.state.type}</h5>
+                <h5>{this.state.gameId} - {this.state.type === TYPES.cross ? 'circle' : 'cross'}</h5>
                 <div style={styles.field}>
                     {this.state.tiles.map((type, i) => (
                         <IconButton
+                            key={i}
                             iconStyle={styles.largeIcon}
                             style={styles.large}
                             onClick={() => this.handleTileClick(i)}
@@ -93,7 +86,7 @@ class App extends Component {
         this.chain.addBlock({
             gameId: this.state.gameId,
             tileIndex: i,
-            type: this.state.type
+            type: !this.state.type
         });
     }
 }
