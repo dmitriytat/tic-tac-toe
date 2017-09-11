@@ -7,7 +7,7 @@ export default class Block {
     index = 0;
 
     /**
-     * @type {{gameId: string, tileIndex: number, type: string}}
+     * @type {{gameId: string, tileIndex: number, type: boolean}}
      */
     action = {};
 
@@ -30,9 +30,10 @@ export default class Block {
      * @param {number} index
      * @param {{gameId: string, tileIndex: number, type: boolean}} action
      * @param {string} previousHash
+     * @param {string} chainId
      * @param {number} timestamp
      */
-    constructor(index, action, previousHash, timestamp = Date.now() / 1000) {
+    constructor(index = 0, action = {gameId: '', tileIndex: -1, type: false}, previousHash = '', timestamp = Date.now() / 1000) {
         this.index = index;
         this.previousHash = previousHash;
         this.action = action;

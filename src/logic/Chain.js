@@ -61,7 +61,14 @@ export default class Chain {
     addBlock(data) {
         const nextBlock = this.nextBlock(this.getLastBlock(), data);
 
-        if (!this.isValidNewBlock(nextBlock, this.getLastBlock())) return;
+        if (!this.isValidNewBlock(nextBlock, this.getLastBlock())) return false;
+
+        const game = this.state[nextBlock.action.gameId] || {};
+
+        if (game.tiles && game.tiles[nextBlock.action.tileIndex] !== '') {
+            console.log('Invalid action');
+            return false;
+        }
 
         this.pushBlock(nextBlock);
 
@@ -85,12 +92,7 @@ export default class Chain {
      * @returns {boolean}
      */
     isValidNewBlock(newBlock, prevBlock) {
-        const game = this.state[newBlock.action.gameId] || {};
-
-        if (game.tiles && game.tiles[newBlock.action.tileIndex] !== '') {
-            console.log('Invalid action');
-            return false;
-        } else if (prevBlock.index + 1 !== newBlock.index) {
+        if (prevBlock.index + 1 !== newBlock.index) {
             console.log('Invalid index');
             return false;
         } else if (prevBlock.hash !== newBlock.previousHash) {

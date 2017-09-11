@@ -37,15 +37,18 @@ const clearTiles = ['', '', '', '', '', '', '', '', '',];
 
 class App extends Component {
     state = {
-        tiles: clearTiles.slice(),
-        type: TYPES.cross,
-        step: 0,
+        state: {}
     };
 
     constructor(props) {
         super(props);
 
         this.state.gameId = props.gameId;
+
+        this.state.state[this.state.gameId] = {
+            tiles: clearTiles.slice(),
+            type: TYPES.cross,
+        }
     }
 
     componentDidMount() {
@@ -54,7 +57,7 @@ class App extends Component {
 
         this.chain.update((state) => {
             this.setState({
-                ...state[this.state.gameId],
+                state,
             });
         });
 
@@ -64,9 +67,10 @@ class App extends Component {
     render() {
         return (
             <div style={styles.app}>
-                <h5>{this.state.gameId} - {this.state.type === TYPES.cross ? 'circle' : 'cross'}</h5>
+                <label>Game id: <input value={this.state.gameId} onChange={(e) => { this.setState({gameId: e.target.value}) }}/></label>
+                <h5>{(this.state.state[this.state.gameId] && (this.state.state[this.state.gameId].type === TYPES.cross)) ? 'circle' : 'cross'}</h5>
                 <div style={styles.field}>
-                    {this.state.tiles.map((type, i) => (
+                    {( this.state.state[this.state.gameId] && this.state.state[this.state.gameId].tiles || clearTiles).map((type, i) => (
                         <IconButton
                             key={i}
                             iconStyle={styles.largeIcon}
@@ -86,7 +90,7 @@ class App extends Component {
         this.chain.addBlock({
             gameId: this.state.gameId,
             tileIndex: i,
-            type: !this.state.type
+            type: !(this.state.state[this.state.gameId] && this.state.state[this.state.gameId].type)
         });
     }
 }
