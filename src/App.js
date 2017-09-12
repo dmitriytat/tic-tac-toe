@@ -67,7 +67,7 @@ class App extends Component {
     render() {
         return (
             <div style={styles.app}>
-                <label>Game id: <input value={this.state.gameId} onChange={(e) => { this.setState({gameId: e.target.value}) }}/></label>
+                <label>Game id: <input type="number" value={this.state.gameId} onChange={(e) => { this.setState({gameId: e.target.value}) }}/></label>
                 <h5>{(this.state.state[this.state.gameId] && (this.state.state[this.state.gameId].type === TYPES.cross)) ? 'circle' : 'cross'}</h5>
                 <div style={styles.field}>
                     {( this.state.state[this.state.gameId] && this.state.state[this.state.gameId].tiles || clearTiles).map((type, i) => (

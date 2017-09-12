@@ -52,10 +52,15 @@ export default class Chain {
      * @param {Block} block
      */
     pushBlock(block) {
-        this.blockchain.push(block);
-        this.saveChain();
-        this.patchState([block]);
-        this.callback(this.state);
+        try {
+            this.state = this.patchState([block], this.state);
+            this.blockchain.push(block);
+            this.saveChain();
+            this.bus.onAddBlock();
+            this.callback(this.state);
+        } catch (e) {
+            console.warn(e.message);
+        }
     }
 
     addBlock(data) {
@@ -71,8 +76,6 @@ export default class Chain {
         }
 
         this.pushBlock(nextBlock);
-
-        this.bus.onAddBlock();
     }
 
     /**
@@ -130,11 +133,15 @@ export default class Chain {
     replaceChain(newBlocks) {
         if (this.isValidChain(newBlocks) && newBlocks.length > this.blockchain.length) {
             console.log('Received blockchain is valid. Replacing current blockchain with received blockchain');
-            this.blockchain = newBlocks;
 
-            this.saveChain();
-            this.calculateFullState();
-            this.callback(this.state);
+            try {
+                this.state = this.calculateFullState(newBlocks);
+                this.blockchain = newBlocks;
+                this.callback(this.state);
+                this.saveChain();
+            } catch (e) {
+                console.warn(e.message);
+            }
         } else {
             console.log('Received blockchain invalid');
         }
@@ -150,15 +157,27 @@ export default class Chain {
             .map(({index, action, previousHash, timestamp}) => new Block(index, action, previousHash, timestamp));
 
         if (blockchain.length) {
-            this.blockchain = blockchain;
-            this.calculateFullState();
-            this.callback(this.state);
+            try {
+                this.state = this.calculateFullState(blockchain);
+                this.blockchain = blockchain;
+                this.callback(this.state);
+            } catch (e) {
+                console.warn(e.message);
+            }
         }
     }
 
-    calculateFullState() {
-        this.state = this.blockchain.reduce((state, {action}) => {
+    /**
+     * @param {Array.<Block>} blockchain
+     * @returns {{}}
+     */
+    calculateFullState(blockchain) {
+        return blockchain.reduce((state, {action}) => {
             const tiles = state[action.gameId] && state[action.gameId].tiles || ['','','','','','','','','',];
+
+            if (action.tileIndex === undefined) return state;
+
+            if (action.tileIndex && tiles[action.tileIndex] !== '') throw new Error('Invalid action');
 
             tiles[action.tileIndex] = action.type;
 
@@ -171,10 +190,18 @@ export default class Chain {
             }
         }, {});
     }
-
-    patchState(blocks) {
-        this.state = blocks.reduce((state, {action}) => {
+    /**
+     * @param {Array.<Block>} blockchain
+     * @param {{}} oldState
+     * @returns {{}}
+     */
+    patchState(blocks, oldState) {
+        return blocks.reduce((state, {action}) => {
             const tiles = state[action.gameId] && state[action.gameId].tiles || ['','','','','','','','','',];
+
+            if (action.tileIndex === undefined) return state;
+
+            if (tiles[action.tileIndex] !== '') throw new Error('Invalid action');
 
             tiles[action.tileIndex] = action.type;
 
@@ -185,6 +212,6 @@ export default class Chain {
                     type: action.type
                 },
             }
-        }, this.state);
+        }, oldState);
     }
 }
