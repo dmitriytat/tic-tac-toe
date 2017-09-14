@@ -1,5 +1,7 @@
 import Block from "./Block";
 
+const DEFAULT_TILES = ['','','','','','','','','',];
+
 export default class Chain {
     /**
      * @type {Array.<Block>}
@@ -53,7 +55,7 @@ export default class Chain {
      */
     pushBlock(block) {
         try {
-            this.state = this.patchState([block], this.state);
+            this.state = this.calculateState([block], this.state);
             this.blockchain.push(block);
             this.saveChain();
             this.bus.onAddBlock();
@@ -67,13 +69,6 @@ export default class Chain {
         const nextBlock = this.nextBlock(this.getLastBlock(), data);
 
         if (!this.isValidNewBlock(nextBlock, this.getLastBlock())) return false;
-
-        const game = this.state[nextBlock.action.gameId] || {};
-
-        if (game.tiles && game.tiles[nextBlock.action.tileIndex] !== '') {
-            console.log('Invalid action');
-            return false;
-        }
 
         this.pushBlock(nextBlock);
     }
@@ -135,7 +130,7 @@ export default class Chain {
             console.log('Received blockchain is valid. Replacing current blockchain with received blockchain');
 
             try {
-                this.state = this.calculateFullState(newBlocks);
+                this.state = this.calculateState(newBlocks);
                 this.blockchain = newBlocks;
                 this.callback(this.state);
                 this.saveChain();
@@ -158,7 +153,7 @@ export default class Chain {
 
         if (blockchain.length) {
             try {
-                this.state = this.calculateFullState(blockchain);
+                this.state = this.calculateState(blockchain);
                 this.blockchain = blockchain;
                 this.callback(this.state);
             } catch (e) {
@@ -168,36 +163,13 @@ export default class Chain {
     }
 
     /**
-     * @param {Array.<Block>} blockchain
-     * @returns {{}}
-     */
-    calculateFullState(blockchain) {
-        return blockchain.reduce((state, {action}) => {
-            const tiles = state[action.gameId] && state[action.gameId].tiles || ['','','','','','','','','',];
-
-            if (action.tileIndex === undefined) return state;
-
-            if (action.tileIndex && tiles[action.tileIndex] !== '') throw new Error('Invalid action');
-
-            tiles[action.tileIndex] = action.type;
-
-            return {
-                ...state,
-                [action.gameId]: {
-                    tiles,
-                    type: action.type
-                },
-            }
-        }, {});
-    }
-    /**
-     * @param {Array.<Block>} blockchain
+     * @param {Array.<Block>} blocks
      * @param {{}} oldState
      * @returns {{}}
      */
-    patchState(blocks, oldState) {
+    calculateState(blocks, oldState = {}) {
         return blocks.reduce((state, {action}) => {
-            const tiles = state[action.gameId] && state[action.gameId].tiles || ['','','','','','','','','',];
+            const tiles = state[action.gameId] && state[action.gameId].tiles || DEFAULT_TILES.slice();
 
             if (action.tileIndex === undefined) return state;
 

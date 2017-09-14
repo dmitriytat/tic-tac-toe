@@ -10,6 +10,7 @@ const QUERY_ALL = 'QUERY_ALL';
 const RESPONSE_BLOCKCHAIN = 'RESPONSE_BLOCKCHAIN';
 
 export default class Bus {
+    logging = true;
     id = '';
     peer = null;
     /**
@@ -33,8 +34,12 @@ export default class Bus {
 
         this.peer.on('connection', (conn) => {
             conn.on('data', (message) => {
-                this.connections.push(conn);
+                this.connections = this.connections.concat([conn]);
                 this.handleMessage(conn, message)
+            });
+
+            conn.on('close', () => {
+                this.connections = this.connections.filter(connection => connection !== conn);
             });
         });
 
@@ -51,8 +56,12 @@ export default class Bus {
                             this.handleMessage(conn, message)
                         });
 
-                        this.connections.push(conn);
+                        this.connections = this.connections.concat([conn]);
                         conn.send(this.queryChainLengthMsg());
+                    });
+
+                    conn.on('close', () => {
+                        this.connections = this.connections.filter(connection => connection !== conn);
                     });
                 });
             });
@@ -75,7 +84,7 @@ export default class Bus {
      */
     handleMessage(connection, data) {
         const message = JSON.parse(data);
-        console.log('Received message ' + JSON.stringify(message));
+        this.log('Received message ' + JSON.stringify(message));
         switch (message.type) {
             case QUERY_LATEST:
                 connection.send(this.responseLatestMsg());
@@ -98,40 +107,40 @@ export default class Bus {
         const latestBlockHeld = this.blockchain.getLastBlock();
 
         if (latestBlockReceived.index > latestBlockHeld.index) {
-            console.log('blockchain possibly behind. We got: ' + latestBlockHeld.index + ' Peer got: ' + latestBlockReceived.index);
+            this.log('blockchain possibly behind. We got: ' + latestBlockHeld.index + ' Peer got: ' + latestBlockReceived.index);
             if (latestBlockHeld.hash === latestBlockReceived.previousHash) {
-                console.log("We can append the received block to our chain");
+                this.log("We can append the received block to our chain");
                 this.blockchain.applyBlock(latestBlockReceived);
-                // this.broadcast(this.responseLatestMsg());
+                this.broadcast(this.responseLatestMsg());
             } else if (receivedBlocks.length === 1) {
-                console.log("We have to query the chain from our peer");
+                this.log("We have to query the chain from our peer");
                 this.broadcast(this.queryAllMsg());
             } else {
-                console.log("Received blockchain is longer than current blockchain");
+                this.log("Received blockchain is longer than current blockchain");
                 this.blockchain.replaceChain(receivedBlocks);
                 this.broadcast(this.responseLatestMsg());
             }
         } else {
-            console.log('received blockchain is not longer than received blockchain. Do nothing');
+            this.log('received blockchain is not longer than received blockchain. Do nothing');
         }
     };
 
     queryChainLengthMsg() {
-        console.log(QUERY_LATEST);
+        this.log(QUERY_LATEST);
         return JSON.stringify({
             'type': QUERY_LATEST
         });
     }
 
     queryAllMsg() {
-        console.log(QUERY_ALL);
+        this.log(QUERY_ALL);
         return JSON.stringify({
             'type': QUERY_ALL
         });
     };
 
     responseChainMsg() {
-        console.log('responseChainMsg', RESPONSE_BLOCKCHAIN);
+        this.log('responseChainMsg', RESPONSE_BLOCKCHAIN);
         return JSON.stringify({
             'type': RESPONSE_BLOCKCHAIN,
             'data': this.blockchain.getChain(),
@@ -139,7 +148,7 @@ export default class Bus {
     };
 
     responseLatestMsg() {
-        console.log('responseLatestMsg', RESPONSE_BLOCKCHAIN);
+        this.log('responseLatestMsg', RESPONSE_BLOCKCHAIN);
         return JSON.stringify({
             'type': RESPONSE_BLOCKCHAIN,
             'data': [this.blockchain.getLastBlock()],
@@ -151,11 +160,14 @@ export default class Bus {
      */
     broadcast(message) {
         this.connections
-        // Object
-        // .values(this.peer.connections)
-        // .filter(conn => conn.open)
             .forEach(conn => {
                 conn.send(message);
             });
+    }
+
+    log(...params) {
+        if (this.logging) {
+            console.log(...params);
+        }
     }
 }
