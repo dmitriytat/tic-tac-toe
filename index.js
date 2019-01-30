@@ -1,8 +1,6 @@
-require('babel-register')({
-    presets: [
-        'es2015',
-        'stage-0'
-    ],
+require('@babel/register')({
+    presets: ['@babel/env'],
+    'plugins': ['@babel/plugin-proposal-class-properties']
 });
 
 require('./server');

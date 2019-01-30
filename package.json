@@ -3,30 +3,37 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "axios": "^0.16.2",
-    "body-parser": "^1.18.0",
-    "express": "^4.15.4",
-    "material-ui": "^0.19.1",
+    "@babel/plugin-proposal-class-properties": "^7.3.0",
+    "@babel/register": "^7.0.0",
+    "axios": "^0.18.0",
+    "body-parser": "^1.18.3",
+    "express": "^4.16.4",
+    "material-ui": "^0.20.2",
     "md5": "^2.2.1",
-    "peer": "^0.2.8",
-    "peerjs": "^0.3.14",
-    "react": "^15.6.1",
-    "react-dom": "^15.6.1",
-    "react-scripts": "^1.0.13"
+    "peer": "^0.2.10",
+    "peerjs": "^0.3.20",
+    "react": "^16.7.0",
+    "react-dom": "^16.7.0",
+    "react-scripts": "^2.1.3"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "yarn install && npm run build && npm run server",
+    "dev": "react-scripts start",
     "server": "node index.js",
     "build": "react-scripts build",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject"
   },
+  "browserslist": [
+    ">0.2%",
+    "not dead",
+    "not ie <= 11",
+    "not op_mini all"
+  ],
   "devDependencies": {
-    "babel-plugin-transform-es2015-modules-commonjs": "^6.26.0",
-    "babel-preset-es2015": "^6.24.1",
-    "babel-preset-stage-0": "^6.24.1",
-    "babel-register": "^6.26.0",
-    "eslint": "^4.6.1",
-    "eslint-plugin-react": "^7.3.0"
+    "eslint-config-airbnb": "^17.1.0",
+    "eslint-plugin-import": "^2.16.0",
+    "eslint-plugin-jsx-a11y": "^6.2.0",
+    "eslint-plugin-react": "^7.12.4"
   }
 }

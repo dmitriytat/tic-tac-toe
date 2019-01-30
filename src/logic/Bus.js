@@ -1,30 +1,31 @@
-import md5 from "md5";
+/* eslint-disable */
+import md5 from 'md5';
 
-import Peer from 'peerjs';
 import axios from 'axios';
-import Chain from "./Chain";
-import Block from "./Block";
+import Chain from './Chain';
+import Block from './Block';
+import 'peerjs';
 
 const QUERY_LATEST = 'QUERY_LATEST';
 const QUERY_ALL = 'QUERY_ALL';
 const RESPONSE_BLOCKCHAIN = 'RESPONSE_BLOCKCHAIN';
 
 export default class Bus {
-    logging = true;
-    id = '';
-    peer = null;
-    /**
-     * @type {{host: string, port: (*), path: string}}
-     */
-    peerOptions = {
-        host: window.location.hostname,
-        port: 9000,
-        path: '/peerjs'
-    };
-
-    connections = [];
-
     constructor() {
+        this.logging = true;
+        this.id = '';
+        this.peer = null;
+        /**
+         * @type {{host: string, port: (*), path: string}}
+         */
+        this.peerOptions = {
+            host: window.location.hostname,
+            port: 9000,
+            path: '/peerjs'
+        };
+
+        this.connections = [];
+
         this.id = md5(`${Date.now()}${Math.random()}`);
 
         this.blockchain = new Chain();
@@ -35,7 +36,7 @@ export default class Bus {
         this.peer.on('connection', (conn) => {
             conn.on('data', (message) => {
                 this.connections = this.connections.concat([conn]);
-                this.handleMessage(conn, message)
+                this.handleMessage(conn, message);
             });
 
             conn.on('close', () => {
@@ -53,7 +54,7 @@ export default class Bus {
 
                     conn.on('open', () => {
                         conn.on('data', (message) => {
-                            this.handleMessage(conn, message)
+                            this.handleMessage(conn, message);
                         });
 
                         this.connections = this.connections.concat([conn]);
@@ -86,15 +87,16 @@ export default class Bus {
         const message = JSON.parse(data);
         this.log('Received message ' + JSON.stringify(message));
         switch (message.type) {
-            case QUERY_LATEST:
-                connection.send(this.responseLatestMsg());
-                break;
-            case QUERY_ALL:
-                connection.send(this.responseChainMsg());
-                break;
-            case RESPONSE_BLOCKCHAIN:
-                this.handleBlockchainResponse(message);
-                break;
+        case QUERY_LATEST:
+            connection.send(this.responseLatestMsg());
+            break;
+        case QUERY_ALL:
+            connection.send(this.responseChainMsg());
+            break;
+        case RESPONSE_BLOCKCHAIN:
+            this.handleBlockchainResponse(message);
+            break;
+        default: return;
         }
     }
 
@@ -109,21 +111,21 @@ export default class Bus {
         if (latestBlockReceived.index > latestBlockHeld.index) {
             this.log('blockchain possibly behind. We got: ' + latestBlockHeld.index + ' Peer got: ' + latestBlockReceived.index);
             if (latestBlockHeld.hash === latestBlockReceived.previousHash) {
-                this.log("We can append the received block to our chain");
+                this.log('We can append the received block to our chain');
                 this.blockchain.applyBlock(latestBlockReceived);
                 this.broadcast(this.responseLatestMsg());
             } else if (receivedBlocks.length === 1) {
-                this.log("We have to query the chain from our peer");
+                this.log('We have to query the chain from our peer');
                 this.broadcast(this.queryAllMsg());
             } else {
-                this.log("Received blockchain is longer than current blockchain");
+                this.log('Received blockchain is longer than current blockchain');
                 this.blockchain.replaceChain(receivedBlocks);
                 this.broadcast(this.responseLatestMsg());
             }
         } else {
-            this.log('received blockchain is not longer than received blockchain. Do nothing');
+            this.log('received blockchain is not longer than current blockchain. Do nothing');
         }
-    };
+    }
 
     queryChainLengthMsg() {
         this.log(QUERY_LATEST);
@@ -137,7 +139,7 @@ export default class Bus {
         return JSON.stringify({
             'type': QUERY_ALL
         });
-    };
+    }
 
     responseChainMsg() {
         this.log('responseChainMsg', RESPONSE_BLOCKCHAIN);
@@ -145,15 +147,15 @@ export default class Bus {
             'type': RESPONSE_BLOCKCHAIN,
             'data': this.blockchain.getChain(),
         });
-    };
+    }
 
     responseLatestMsg() {
         this.log('responseLatestMsg', RESPONSE_BLOCKCHAIN);
         return JSON.stringify({
             'type': RESPONSE_BLOCKCHAIN,
             'data': [this.blockchain.getLastBlock()],
-        })
-    };
+        });
+    }
 
     /**
      * @param message

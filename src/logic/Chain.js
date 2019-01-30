@@ -1,4 +1,5 @@
-import Block from "./Block";
+/* eslint-disable */
+import Block from './Block';
 
 const DEFAULT_TILES = ['','','','','','','','','',];
 
@@ -14,7 +15,7 @@ export default class Chain {
     constructor() {
         this.blockchain.push(this.createGenesisBlock());
 
-        setTimeout(() => this.restoreChain(), 0)
+        setTimeout(() => this.restoreChain(), 0);
     }
 
     setBus(bus) {
@@ -47,7 +48,7 @@ export default class Chain {
         const index = lastBlock.index + 1;
         const hash = lastBlock.hash;
 
-        return new Block(index, data, hash)
+        return new Block(index, data, hash);
     }
 
     /**
@@ -102,7 +103,7 @@ export default class Chain {
         }
 
         return true;
-    };
+    }
 
     /**
      * @param {Array.<Block>} blockchainToValidate
@@ -120,7 +121,7 @@ export default class Chain {
             }
         }
         return true;
-    };
+    }
 
     /**
      * @param {Array.<Block>} newBlocks
@@ -147,7 +148,7 @@ export default class Chain {
     }
 
     restoreChain() {
-        const fromStore = window.localStorage.getItem('chain') || "[]";
+        const fromStore = window.localStorage.getItem('chain') || '[]';
         const blockchain = JSON.parse(fromStore)
             .map(({index, action, previousHash, timestamp}) => new Block(index, action, previousHash, timestamp));
 
@@ -183,7 +184,7 @@ export default class Chain {
                     tiles,
                     type: action.type
                 },
-            }
+            };
         }, oldState);
     }
 }
