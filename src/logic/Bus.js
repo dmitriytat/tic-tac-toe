@@ -20,7 +20,7 @@ export default class Bus {
          */
         this.peerOptions = {
             host: window.location.hostname,
-            port: 8080,
+            port: 80,
             path: '/peerjs'
         };
 
