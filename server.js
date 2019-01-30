@@ -30,7 +30,7 @@ app.use(bodyParser.json());
 
 app.use('/', express.static('build'));
 
-const server = app.listen(9000, '0.0.0.0', () => {
+const server = app.listen(8080, '0.0.0.0', () => {
     console.log('listen');
 });
 
