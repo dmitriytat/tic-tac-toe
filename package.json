@@ -17,7 +17,7 @@
     "react-scripts": "^2.1.3"
   },
   "scripts": {
-    "start": "npm install && npm run server",
+    "start": "npm install && npm run prod && npm run server",
     "dev": "react-scripts start",
     "server": "node index.js",
     "prod": "react-scripts build",
