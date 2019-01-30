@@ -20,7 +20,7 @@
     "start": "npm install && npm run server",
     "dev": "react-scripts start",
     "server": "node index.js",
-    "build": "react-scripts build",
+    "prod": "react-scripts build",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject"
   },
